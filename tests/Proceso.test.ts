@@ -21,4 +21,15 @@ describe("Proceso", () => {
     expect(p.quantumConsumido).toBe(0);
     expect(p.tiempoBloqueoRestante).toBe(0);
   });
+
+  it("no permite un pid vacio", () => {
+    expect(() => new Proceso("  ", 200, 4)).toThrow();
+  });
+
+  it("no permite tamanio ni tiempo de cpu menores o iguales a cero", () => {
+    expect(() => new Proceso("P1", 0, 4)).toThrow();
+    expect(() => new Proceso("P1", -50, 4)).toThrow();
+    expect(() => new Proceso("P1", 200, 0)).toThrow();
+    expect(() => new Proceso("P1", 200, 2.5)).toThrow();
+  });
 });

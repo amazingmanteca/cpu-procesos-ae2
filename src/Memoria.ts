@@ -14,6 +14,29 @@ export class Memoria {
     this.bloques = [new BloqueMemoria(0, tamanioTotal)];
   }
 
+  asignarBestFit(proceso: Proceso): boolean {
+    let mejorIndice = -1;
+    let menorDesperdicio = Infinity;
+
+    for (let i = 0; i < this.bloques.length; i++) {
+      const bloque = this.bloques[i];
+      if (bloque.libre && bloque.tamanio >= proceso.tamanioMemoria) {
+        const desperdicio = bloque.tamanio - proceso.tamanioMemoria;
+        // Con menor estricto, si hay empate queda el primer bloque encontrado
+        if (desperdicio < menorDesperdicio) {
+          menorDesperdicio = desperdicio;
+          mejorIndice = i;
+        }
+      }
+    }
+
+    if (mejorIndice === -1) {
+      return false;
+    }
+    this.partirYAsignar(mejorIndice, proceso);
+    return true;
+  }
+
   private partirYAsignar(indice: number, proceso: Proceso): void {
     const bloque = this.bloques[indice];
     // Si sobra espacio se crea un bloque libre justo despues del asignado

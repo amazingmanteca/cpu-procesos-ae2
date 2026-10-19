@@ -59,4 +59,24 @@ describe("Memoria con Best-Fit", () => {
     expect(inicios).toEqual([0, 200, 550, 700]);
     expect(memoria.bloques[3]).toMatchObject({ tamanio: 324, libre: true });
   });
+
+  it("si dos huecos dejan el mismo desperdicio elige el primero", () => {
+    const memoria = new Memoria(1024);
+    memoria.bloques = [
+      new BloqueMemoria(0, 200),
+      new BloqueMemoria(200, 100, false, "X1"),
+      new BloqueMemoria(300, 200),
+      new BloqueMemoria(500, 524, false, "X2"),
+    ];
+    memoria.asignarBestFit(new Proceso("P1", 150, 2));
+    expect(memoria.bloques[0]).toMatchObject({ inicio: 0, pid: "P1" });
+    expect(memoria.bloques[3]).toMatchObject({ inicio: 300, tamanio: 200, libre: true });
+  });
+
+  it("si el hueco tiene el tamanio exacto no se parte", () => {
+    const memoria = memoriaConHuecos();
+    memoria.asignarBestFit(new Proceso("P1", 120, 2));
+    expect(memoria.bloques).toHaveLength(5);
+    expect(memoria.bloques[2]).toMatchObject({ inicio: 352, tamanio: 120, libre: false, pid: "P1" });
+  });
 });

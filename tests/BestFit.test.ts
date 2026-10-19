@@ -79,4 +79,17 @@ describe("Memoria con Best-Fit", () => {
     expect(memoria.bloques).toHaveLength(5);
     expect(memoria.bloques[2]).toMatchObject({ inicio: 352, tamanio: 120, libre: false, pid: "P1" });
   });
+
+  it("devuelve false y no modifica nada si ningun hueco alcanza", () => {
+    const memoria = memoriaConHuecos();
+    const antes = JSON.stringify(memoria.bloques);
+    expect(memoria.asignarBestFit(new Proceso("P1", 600, 2))).toBe(false);
+    expect(JSON.stringify(memoria.bloques)).toBe(antes);
+  });
+
+  it("no asigna aunque la suma de los huecos alcance, por fragmentacion externa", () => {
+    const memoria = memoriaConHuecos();
+    // Hay 920 KB libres en total pero el hueco mas grande es de 500 KB
+    expect(memoria.asignarBestFit(new Proceso("P1", 550, 2))).toBe(false);
+  });
 });

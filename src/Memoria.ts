@@ -37,6 +37,16 @@ export class Memoria {
     return true;
   }
 
+  liberar(pid: string): boolean {
+    const bloque = this.bloques.find((b) => b.pid === pid);
+    if (!bloque) {
+      return false;
+    }
+    bloque.libre = true;
+    bloque.pid = null;
+    return true;
+  }
+
   private partirYAsignar(indice: number, proceso: Proceso): void {
     const bloque = this.bloques[indice];
     // Si sobra espacio se crea un bloque libre justo despues del asignado

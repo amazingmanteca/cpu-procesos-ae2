@@ -44,7 +44,23 @@ export class Memoria {
     }
     bloque.libre = true;
     bloque.pid = null;
+    this.coalescencia();
     return true;
+  }
+
+  coalescencia(): void {
+    let i = 0;
+    while (i < this.bloques.length - 1) {
+      const actual = this.bloques[i];
+      const siguiente = this.bloques[i + 1];
+      if (actual.libre && siguiente.libre) {
+        actual.tamanio += siguiente.tamanio;
+        this.bloques.splice(i + 1, 1);
+        // No se avanza i porque el bloque crecio y puede unirse tambien con el que sigue
+      } else {
+        i++;
+      }
+    }
   }
 
   private partirYAsignar(indice: number, proceso: Proceso): void {

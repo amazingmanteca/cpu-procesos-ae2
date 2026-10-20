@@ -78,12 +78,15 @@ export class Memoria {
       }
     }
 
+    // Formula de la consigna, si no hay memoria libre se toma como 0 para no dividir por cero
+    const fragmentacionExterna = libreTotal > 0 ? (1 - mayorHueco / libreTotal) * 100 : 0;
+
     return {
       ocupada,
       libreTotal,
       mayorHueco,
       porcentajeOcupacion: (ocupada / this.tamanioTotal) * 100,
-      fragmentacionExterna: 0,
+      fragmentacionExterna,
     };
   }
 

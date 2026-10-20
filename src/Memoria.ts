@@ -1,5 +1,6 @@
 import { BloqueMemoria } from "./BloqueMemoria";
 import { Proceso } from "./Proceso";
+import { MetricasMemoria } from "./MetricasMemoria";
 
 export class Memoria {
   readonly tamanioTotal: number;
@@ -61,6 +62,29 @@ export class Memoria {
         i++;
       }
     }
+  }
+
+  obtenerMetricas(): MetricasMemoria {
+    let ocupada = 0;
+    let libreTotal = 0;
+    let mayorHueco = 0;
+
+    for (const bloque of this.bloques) {
+      if (bloque.libre) {
+        libreTotal += bloque.tamanio;
+        mayorHueco = Math.max(mayorHueco, bloque.tamanio);
+      } else {
+        ocupada += bloque.tamanio;
+      }
+    }
+
+    return {
+      ocupada,
+      libreTotal,
+      mayorHueco,
+      porcentajeOcupacion: (ocupada / this.tamanioTotal) * 100,
+      fragmentacionExterna: 0,
+    };
   }
 
   private partirYAsignar(indice: number, proceso: Proceso): void {

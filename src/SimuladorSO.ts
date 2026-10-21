@@ -61,6 +61,9 @@ export class SimuladorSO {
         this.colaListos.push(proceso);
         this.cpuProceso = null;
         this.cambiosContexto++;
+      } else {
+        // Si no hay otro proceso listo sigue en la cpu con un quantum nuevo
+        proceso.quantumConsumido = 0;
       }
     }
   }

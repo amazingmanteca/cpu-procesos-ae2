@@ -54,6 +54,14 @@ export class SimuladorSO {
       this.memoria.liberar(proceso.pid);
       this.procesosTerminados.push(proceso);
       this.cpuProceso = null;
+    } else if (proceso.quantumConsumido === this.quantum) {
+      if (this.colaListos.length > 0) {
+        proceso.estado = EstadoProceso.Listo;
+        proceso.quantumConsumido = 0;
+        this.colaListos.push(proceso);
+        this.cpuProceso = null;
+        this.cambiosContexto++;
+      }
     }
   }
 

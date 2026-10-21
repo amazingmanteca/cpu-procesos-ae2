@@ -36,6 +36,16 @@ export class SimuladorSO {
   avanzarTick(): void {
     this.relojTick++;
     this.admitirProcesos();
+    this.despachar();
+  }
+
+  private despachar(): void {
+    if (this.cpuProceso === null && this.colaListos.length > 0) {
+      const proceso = this.colaListos.shift() as Proceso;
+      proceso.estado = EstadoProceso.Ejecutando;
+      proceso.quantumConsumido = 0;
+      this.cpuProceso = proceso;
+    }
   }
 
   private admitirProcesos(): void {

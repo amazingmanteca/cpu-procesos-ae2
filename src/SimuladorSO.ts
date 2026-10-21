@@ -35,6 +35,27 @@ export class SimuladorSO {
 
   avanzarTick(): void {
     this.relojTick++;
+    this.admitirProcesos();
+  }
+
+  private admitirProcesos(): void {
+    for (const proceso of this.colaNuevos.splice(0)) {
+      proceso.estado = EstadoProceso.EsperandoMemoria;
+      this.colaEsperandoMemoria.push(proceso);
+    }
+
+    // Se reintenta en cada tick, asi un proceso que no entro puede hacerlo cuando se libere memoria
+    let i = 0;
+    while (i < this.colaEsperandoMemoria.length) {
+      const proceso = this.colaEsperandoMemoria[i];
+      if (this.memoria.asignarBestFit(proceso)) {
+        proceso.estado = EstadoProceso.Listo;
+        this.colaListos.push(proceso);
+        this.colaEsperandoMemoria.splice(i, 1);
+      } else {
+        i++;
+      }
+    }
   }
 
   private todosLosProcesos(): Proceso[] {

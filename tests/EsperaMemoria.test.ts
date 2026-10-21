@@ -47,4 +47,21 @@ describe("Ingreso de procesos y espera de memoria", () => {
     expect(grande.estado).toBe(EstadoProceso.EsperandoMemoria);
     expect(sim.memoria.obtenerMetricas().ocupada).toBe(0);
   });
+
+  it("cuando un proceso termina el que esperaba obtiene memoria en el tick siguiente", () => {
+    const sim = new SimuladorSO(2, 500);
+    const p1 = new Proceso("P1", 300, 1);
+    const p2 = new Proceso("P2", 300, 1);
+    sim.agregarProceso(p1);
+    sim.agregarProceso(p2);
+
+    sim.avanzarTick();
+    expect(p1.estado).toBe(EstadoProceso.Terminado);
+    expect(p2.estado).toBe(EstadoProceso.EsperandoMemoria);
+
+    sim.avanzarTick();
+    expect(sim.colaEsperandoMemoria).toHaveLength(0);
+    expect(p2.estado).toBe(EstadoProceso.Terminado);
+    expect(sim.procesosTerminados.map((p) => p.pid)).toEqual(["P1", "P2"]);
+  });
 });

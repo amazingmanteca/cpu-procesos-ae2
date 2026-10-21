@@ -37,6 +37,24 @@ export class SimuladorSO {
     this.relojTick++;
     this.admitirProcesos();
     this.despachar();
+    this.ejecutar();
+  }
+
+  private ejecutar(): void {
+    const proceso = this.cpuProceso;
+    if (proceso === null) {
+      return;
+    }
+    this.ticksCpuOcupada++;
+    proceso.tiempoCpuRestante--;
+    proceso.quantumConsumido++;
+
+    if (proceso.tiempoCpuRestante === 0) {
+      proceso.estado = EstadoProceso.Terminado;
+      this.memoria.liberar(proceso.pid);
+      this.procesosTerminados.push(proceso);
+      this.cpuProceso = null;
+    }
   }
 
   private despachar(): void {

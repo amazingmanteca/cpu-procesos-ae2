@@ -69,6 +69,33 @@ export class SimuladorSO {
     return true;
   }
 
+  finalizarProceso(pid: string): boolean {
+    let proceso: Proceso | undefined;
+
+    if (this.cpuProceso?.pid === pid) {
+      proceso = this.cpuProceso;
+      this.cpuProceso = null;
+    } else {
+      const colas = [this.colaNuevos, this.colaEsperandoMemoria, this.colaListos, this.colaBloqueados];
+      for (const cola of colas) {
+        const indice = cola.findIndex((p) => p.pid === pid);
+        if (indice !== -1) {
+          proceso = cola.splice(indice, 1)[0];
+          break;
+        }
+      }
+    }
+
+    if (!proceso) {
+      return false;
+    }
+    proceso.estado = EstadoProceso.Terminado;
+    // Si todavia no tenia memoria asignada liberar devuelve false y no pasa nada
+    this.memoria.liberar(proceso.pid);
+    this.procesosTerminados.push(proceso);
+    return true;
+  }
+
   private actualizarBloqueados(): void {
     let i = 0;
     while (i < this.colaBloqueados.length) {

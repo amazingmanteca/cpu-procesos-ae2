@@ -35,6 +35,7 @@ export class SimuladorSO {
   }
 
   avanzarTick(): void {
+    // Mismo orden que el simulador original, ingreso, bloqueados, despacho y ejecucion
     this.relojTick++;
     this.admitirProcesos();
     this.actualizarBloqueados();
@@ -89,63 +90,8 @@ export class SimuladorSO {
     if (!proceso) {
       return false;
     }
-    proceso.estado = EstadoProceso.Terminado;
-    // Si todavia no tenia memoria asignada liberar devuelve false y no pasa nada
-    this.memoria.liberar(proceso.pid);
-    this.procesosTerminados.push(proceso);
+    this.terminar(proceso);
     return true;
-  }
-
-  private actualizarBloqueados(): void {
-    let i = 0;
-    while (i < this.colaBloqueados.length) {
-      const proceso = this.colaBloqueados[i];
-      proceso.tiempoBloqueoRestante--;
-      if (proceso.tiempoBloqueoRestante <= 0) {
-        proceso.estado = EstadoProceso.Listo;
-        this.colaListos.push(proceso);
-        this.colaBloqueados.splice(i, 1);
-      } else {
-        i++;
-      }
-    }
-  }
-
-  private ejecutar(): void {
-    const proceso = this.cpuProceso;
-    if (proceso === null) {
-      return;
-    }
-    this.ticksCpuOcupada++;
-    proceso.tiempoCpuRestante--;
-    proceso.quantumConsumido++;
-
-    if (proceso.tiempoCpuRestante === 0) {
-      proceso.estado = EstadoProceso.Terminado;
-      this.memoria.liberar(proceso.pid);
-      this.procesosTerminados.push(proceso);
-      this.cpuProceso = null;
-    } else if (proceso.quantumConsumido === this.quantum) {
-      if (this.colaListos.length > 0) {
-        proceso.estado = EstadoProceso.Listo;
-        proceso.quantumConsumido = 0;
-        this.colaListos.push(proceso);
-        this.cpuProceso = null;
-        this.cambiosContexto++;
-      } else {
-        // Si no hay otro proceso listo sigue en la cpu con un quantum nuevo
-        proceso.quantumConsumido = 0;
-      }
-    }
-  }
-
-  private despachar(): void {
-    if (this.cpuProceso === null && this.colaListos.length > 0) {
-      const proceso = this.colaListos.shift() as Proceso;
-      proceso.estado = EstadoProceso.Ejecutando;
-      proceso.quantumConsumido = 0;
-      this.cpuProceso = proceso;
-    }
   }
 
   private admitirProcesos(): void {
@@ -166,6 +112,63 @@ export class SimuladorSO {
         i++;
       }
     }
+  }
+
+  private actualizarBloqueados(): void {
+    let i = 0;
+    while (i < this.colaBloqueados.length) {
+      const proceso = this.colaBloqueados[i];
+      proceso.tiempoBloqueoRestante--;
+      if (proceso.tiempoBloqueoRestante <= 0) {
+        proceso.estado = EstadoProceso.Listo;
+        this.colaListos.push(proceso);
+        this.colaBloqueados.splice(i, 1);
+      } else {
+        i++;
+      }
+    }
+  }
+
+  private despachar(): void {
+    if (this.cpuProceso === null && this.colaListos.length > 0) {
+      const proceso = this.colaListos.shift() as Proceso;
+      proceso.estado = EstadoProceso.Ejecutando;
+      proceso.quantumConsumido = 0;
+      this.cpuProceso = proceso;
+    }
+  }
+
+  private ejecutar(): void {
+    const proceso = this.cpuProceso;
+    if (proceso === null) {
+      return;
+    }
+    this.ticksCpuOcupada++;
+    proceso.tiempoCpuRestante--;
+    proceso.quantumConsumido++;
+
+    if (proceso.tiempoCpuRestante === 0) {
+      this.cpuProceso = null;
+      this.terminar(proceso);
+    } else if (proceso.quantumConsumido === this.quantum) {
+      if (this.colaListos.length > 0) {
+        proceso.estado = EstadoProceso.Listo;
+        proceso.quantumConsumido = 0;
+        this.colaListos.push(proceso);
+        this.cpuProceso = null;
+        this.cambiosContexto++;
+      } else {
+        // Si no hay otro proceso listo sigue en la cpu con un quantum nuevo
+        proceso.quantumConsumido = 0;
+      }
+    }
+  }
+
+  private terminar(proceso: Proceso): void {
+    proceso.estado = EstadoProceso.Terminado;
+    // Si todavia no tenia memoria asignada liberar devuelve false y no pasa nada
+    this.memoria.liberar(proceso.pid);
+    this.procesosTerminados.push(proceso);
   }
 
   private todosLosProcesos(): Proceso[] {

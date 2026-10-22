@@ -1,6 +1,7 @@
 import { Memoria } from "./Memoria";
 import { Proceso } from "./Proceso";
 import { EstadoProceso } from "./EstadoProceso";
+import { MetricasSimulador } from "./MetricasSimulador";
 
 export class SimuladorSO {
   readonly memoria: Memoria;
@@ -39,6 +40,16 @@ export class SimuladorSO {
     this.actualizarBloqueados();
     this.despachar();
     this.ejecutar();
+  }
+
+  obtenerMetricas(): MetricasSimulador {
+    // Porcentaje de ticks en los que la cpu tuvo un proceso, acumulado desde el inicio
+    const usoCpu = this.relojTick > 0 ? (this.ticksCpuOcupada / this.relojTick) * 100 : 0;
+    return {
+      ...this.memoria.obtenerMetricas(),
+      usoCpu,
+      cambiosContexto: this.cambiosContexto,
+    };
   }
 
   bloquearProcesoActual(ticksBloqueo = 2): boolean {

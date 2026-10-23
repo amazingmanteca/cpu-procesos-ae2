@@ -36,8 +36,41 @@ export class SimuladorSO {
   avanzarTick(): void {
     this.relojTick++;
     this.admitirProcesos();
+    this.actualizarBloqueados();
     this.despachar();
     this.ejecutar();
+  }
+
+  bloquearProcesoActual(ticksBloqueo = 2): boolean {
+    if (!Number.isInteger(ticksBloqueo) || ticksBloqueo <= 0) {
+      throw new Error("Los ticks de bloqueo deben ser un entero mayor a 0");
+    }
+    const proceso = this.cpuProceso;
+    if (proceso === null) {
+      return false;
+    }
+    // El proceso bloqueado conserva su memoria, solo deja la cpu
+    proceso.estado = EstadoProceso.Bloqueado;
+    proceso.tiempoBloqueoRestante = ticksBloqueo;
+    this.colaBloqueados.push(proceso);
+    this.cpuProceso = null;
+    this.cambiosContexto++;
+    return true;
+  }
+
+  private actualizarBloqueados(): void {
+    let i = 0;
+    while (i < this.colaBloqueados.length) {
+      const proceso = this.colaBloqueados[i];
+      proceso.tiempoBloqueoRestante--;
+      if (proceso.tiempoBloqueoRestante <= 0) {
+        proceso.estado = EstadoProceso.Listo;
+        this.colaListos.push(proceso);
+        this.colaBloqueados.splice(i, 1);
+      } else {
+        i++;
+      }
+    }
   }
 
   private ejecutar(): void {
@@ -54,6 +87,17 @@ export class SimuladorSO {
       this.memoria.liberar(proceso.pid);
       this.procesosTerminados.push(proceso);
       this.cpuProceso = null;
+    } else if (proceso.quantumConsumido === this.quantum) {
+      if (this.colaListos.length > 0) {
+        proceso.estado = EstadoProceso.Listo;
+        proceso.quantumConsumido = 0;
+        this.colaListos.push(proceso);
+        this.cpuProceso = null;
+        this.cambiosContexto++;
+      } else {
+        // Si no hay otro proceso listo sigue en la cpu con un quantum nuevo
+        proceso.quantumConsumido = 0;
+      }
     }
   }
 

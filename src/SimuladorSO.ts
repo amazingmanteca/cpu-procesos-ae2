@@ -1,6 +1,7 @@
 import { Memoria } from "./Memoria";
 import { Proceso } from "./Proceso";
 import { EstadoProceso } from "./EstadoProceso";
+import { MetricasSimulador } from "./MetricasSimulador";
 
 export class SimuladorSO {
   readonly memoria: Memoria;
@@ -34,11 +35,22 @@ export class SimuladorSO {
   }
 
   avanzarTick(): void {
+    // Mismo orden que el simulador original, ingreso, bloqueados, despacho y ejecucion
     this.relojTick++;
     this.admitirProcesos();
     this.actualizarBloqueados();
     this.despachar();
     this.ejecutar();
+  }
+
+  obtenerMetricas(): MetricasSimulador {
+    // Porcentaje de ticks en los que la cpu tuvo un proceso, acumulado desde el inicio
+    const usoCpu = this.relojTick > 0 ? (this.ticksCpuOcupada / this.relojTick) * 100 : 0;
+    return {
+      ...this.memoria.obtenerMetricas(),
+      usoCpu,
+      cambiosContexto: this.cambiosContexto,
+    };
   }
 
   bloquearProcesoActual(ticksBloqueo = 2): boolean {
@@ -58,56 +70,28 @@ export class SimuladorSO {
     return true;
   }
 
-  private actualizarBloqueados(): void {
-    let i = 0;
-    while (i < this.colaBloqueados.length) {
-      const proceso = this.colaBloqueados[i];
-      proceso.tiempoBloqueoRestante--;
-      if (proceso.tiempoBloqueoRestante <= 0) {
-        proceso.estado = EstadoProceso.Listo;
-        this.colaListos.push(proceso);
-        this.colaBloqueados.splice(i, 1);
-      } else {
-        i++;
-      }
-    }
-  }
+  finalizarProceso(pid: string): boolean {
+    let proceso: Proceso | undefined;
 
-  private ejecutar(): void {
-    const proceso = this.cpuProceso;
-    if (proceso === null) {
-      return;
-    }
-    this.ticksCpuOcupada++;
-    proceso.tiempoCpuRestante--;
-    proceso.quantumConsumido++;
-
-    if (proceso.tiempoCpuRestante === 0) {
-      proceso.estado = EstadoProceso.Terminado;
-      this.memoria.liberar(proceso.pid);
-      this.procesosTerminados.push(proceso);
+    if (this.cpuProceso?.pid === pid) {
+      proceso = this.cpuProceso;
       this.cpuProceso = null;
-    } else if (proceso.quantumConsumido === this.quantum) {
-      if (this.colaListos.length > 0) {
-        proceso.estado = EstadoProceso.Listo;
-        proceso.quantumConsumido = 0;
-        this.colaListos.push(proceso);
-        this.cpuProceso = null;
-        this.cambiosContexto++;
-      } else {
-        // Si no hay otro proceso listo sigue en la cpu con un quantum nuevo
-        proceso.quantumConsumido = 0;
+    } else {
+      const colas = [this.colaNuevos, this.colaEsperandoMemoria, this.colaListos, this.colaBloqueados];
+      for (const cola of colas) {
+        const indice = cola.findIndex((p) => p.pid === pid);
+        if (indice !== -1) {
+          proceso = cola.splice(indice, 1)[0];
+          break;
+        }
       }
     }
-  }
 
-  private despachar(): void {
-    if (this.cpuProceso === null && this.colaListos.length > 0) {
-      const proceso = this.colaListos.shift() as Proceso;
-      proceso.estado = EstadoProceso.Ejecutando;
-      proceso.quantumConsumido = 0;
-      this.cpuProceso = proceso;
+    if (!proceso) {
+      return false;
     }
+    this.terminar(proceso);
+    return true;
   }
 
   private admitirProcesos(): void {
@@ -128,6 +112,63 @@ export class SimuladorSO {
         i++;
       }
     }
+  }
+
+  private actualizarBloqueados(): void {
+    let i = 0;
+    while (i < this.colaBloqueados.length) {
+      const proceso = this.colaBloqueados[i];
+      proceso.tiempoBloqueoRestante--;
+      if (proceso.tiempoBloqueoRestante <= 0) {
+        proceso.estado = EstadoProceso.Listo;
+        this.colaListos.push(proceso);
+        this.colaBloqueados.splice(i, 1);
+      } else {
+        i++;
+      }
+    }
+  }
+
+  private despachar(): void {
+    if (this.cpuProceso === null && this.colaListos.length > 0) {
+      const proceso = this.colaListos.shift() as Proceso;
+      proceso.estado = EstadoProceso.Ejecutando;
+      proceso.quantumConsumido = 0;
+      this.cpuProceso = proceso;
+    }
+  }
+
+  private ejecutar(): void {
+    const proceso = this.cpuProceso;
+    if (proceso === null) {
+      return;
+    }
+    this.ticksCpuOcupada++;
+    proceso.tiempoCpuRestante--;
+    proceso.quantumConsumido++;
+
+    if (proceso.tiempoCpuRestante === 0) {
+      this.cpuProceso = null;
+      this.terminar(proceso);
+    } else if (proceso.quantumConsumido === this.quantum) {
+      if (this.colaListos.length > 0) {
+        proceso.estado = EstadoProceso.Listo;
+        proceso.quantumConsumido = 0;
+        this.colaListos.push(proceso);
+        this.cpuProceso = null;
+        this.cambiosContexto++;
+      } else {
+        // Si no hay otro proceso listo sigue en la cpu con un quantum nuevo
+        proceso.quantumConsumido = 0;
+      }
+    }
+  }
+
+  private terminar(proceso: Proceso): void {
+    proceso.estado = EstadoProceso.Terminado;
+    // Si todavia no tenia memoria asignada liberar devuelve false y no pasa nada
+    this.memoria.liberar(proceso.pid);
+    this.procesosTerminados.push(proceso);
   }
 
   private todosLosProcesos(): Proceso[] {

@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/amazingmanteca/cpu-procesos-ae2#readme",
   "devDependencies": {
+    "@vitest/coverage-v8": "^5.0.5",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   }
